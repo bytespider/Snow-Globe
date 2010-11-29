@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black">
+        <style type="text/css">
+            canvas {
+                background-color: #000;
+            }
+        </style>
+    </head>
+    <body style="margin: 0;">
+        <canvas id="canvas" width="320" height="340"></canvas>
+        <script type="text/javascript">
+            window.addEventListener('load', init, false);
+
+            function init() {
+                document.body.addEventListener('touchmove', function (e) {e.preventDefault()}, false);
+
+                var c = document.getElementById('canvas');
+                var cx = c.getContext("2d");
+
+                var i = 0;
+                var speed;
+                var snowflakes = 100;
+                var snowflakesArray = [];
+
+                var crds = [];
+                var x_mv = [];
+
+                while(i < snowflakes) {
+                    snowflakesArray.push(new Snowflake(Math.round(Math.random() * c.width), c.width));
+
+                    crds[i] = 0;
+                    x_mv[i] = .03 + Math.random() / 10;
+
+                    ++i;
+                }
+
+                function Snowflake(x, y) {
+
+                    this.size = 1 + Math.random() * 3;
+                    this.x = x;
+                    this.y = y - (this.size * 2);
+                    this.speed = .005 + Math.random()*(.355);
+                    this.style = "rgba(255, 255, 255, " + (1 + Math.random() * 10) / 10 + ")";
+                };
+
+                Snowflake.prototype = {
+                    size: 0,
+                    x: 0,
+                    y: 0,
+                    speed: 0,
+                    style: ''
+                };
+
+                var calibration = {x:null, y:null};
+
+                window.addEventListener('devicemotion', function (e) {
+
+                    var acceleration = e.accelerationIncludingGravity;
+
+                    if (calibration.x == null) {
+                        calibration.x = acceleration.x;
+                        calibration.y = acceleration.y;
+                    }
+
+                    if (calibration.y == acceleration.y) {
+                        return false;
+                    }
+
+                    // clear frame
+                    cx.clearRect(0, 0, c.width, c.height);
+
+                    var i = 0;
+                    while (i < snowflakes) {
+                        crds[i] += x_mv[i];
+
+                        var snowflake = snowflakesArray[i];
+                        if (acceleration.y > calibration.y + 10) {
+                            speed = acceleration.y * snowflake.speed;
+                        }
+                        if (acceleration.y < calibration.y + 10) {
+                            speed = acceleration.y * snowflake.speed;
+                        }
+
+                        snowflake.y -= speed;
+
+                        //console.log(speed);
+                        if (c.height - snowflake.size >= snowflake.y && snowflake.y > 1 && speed > 0) {
+                            snowflake.x += Math.sin(crds[i]);
+                        }
+
+                        cx.beginPath();
+                        cx.fillStyle = snowflake.style;
+                        cx.arc(snowflake.x, snowflake.y, snowflake.size, 0, Math.PI*2, true);
+                        cx.fill();
+                        cx.closePath();
+
+                        if (c.height - snowflake.size <= snowflake.y) {
+                            snowflake.y = c.height - snowflake.size;
+                        } else if (snowflake.y < 1) {
+                            snowflake.y = 0;
+                        }
+
+                        ++i;
+
+                        crds[i] += x_mv[i];
+
+                        var snowflake = snowflakesArray[i];
+                        if (acceleration.y > calibration.y + 10) {
+                            speed = acceleration.y * snowflake.speed;
+                        }
+                        if (acceleration.y < calibration.y + 10) {
+                            speed = acceleration.y * snowflake.speed;
+                        }
+
+                        snowflake.y -= speed;
+
+                        if (c.height - snowflake.size >= snowflake.y && snowflake.y > 1) {
+                            snowflake.x += Math.sin(crds[i]);
+                        }
+
+                        cx.beginPath();
+                        cx.fillStyle = snowflake.style;
+                        cx.arc(snowflake.x, snowflake.y, snowflake.size, 0, Math.PI*2, true);
+                        cx.fill();
+                        cx.closePath();
+
+                        if (c.height - snowflake.size <= snowflake.y) {
+                            snowflake.y = c.height - snowflake.size;
+                        } else if (snowflake.y < 1) {
+                            snowflake.y = 0;
+                        }
+
+                        ++i;
+                    }
+
+                }, true);
+            }
+        </script>
+    </body>
+</html>
