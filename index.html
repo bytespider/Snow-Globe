@@ -20,6 +20,11 @@
                 var c = document.getElementById('canvas');
                 var cx = c.getContext("2d");
 
+                if (!('ondevicemotion' in window)) {
+                    alert('Sorry your device doesnt support the accelerometer API');
+                    return false;
+                }
+
                 var i = 0;
                 var speed;
                 var snowflakes = 100;
