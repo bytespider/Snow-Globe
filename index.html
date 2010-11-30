@@ -8,6 +8,7 @@
                 background: #001a33 url(bg.png) no-repeat bottom left;
             }
         </style>
+        <title>Snow Globe</title>
     </head>
     <body style="margin: 0;">
         <canvas id="canvas" width="320" height="340"></canvas>
@@ -17,11 +18,14 @@
             function init() {
                 document.body.addEventListener('touchmove', function (e) {e.preventDefault()}, false);
                 window.addEventListener('unload', function () {
-                    window.removeEventListener('ondevicemotion', draw, false);
+                    clearInterval(mainLoop);
+                    window.removeEventListener('ondevicemotion', updateAccelerometer, false);
                 }, true);
 
                 var c = document.getElementById('canvas');
                 var cx = c.getContext("2d");
+
+                cx.fillStyle = 'rgb(255, 255, 255)';
 
                 if (!('ondevicemotion' in window)) {
                     alert('Sorry your device doesnt support the accelerometer API');
@@ -29,29 +33,24 @@
                 }
 
                 var i = 0;
-                var speed;
-                var snowflakes = 80;
+                var snowflakes = 200;
                 var snowflakesArray = [];
-
-                var crds = [];
-                var x_mv = [];
+                var d360 = Math.PI*2;
 
                 while(i < snowflakes) {
-                    snowflakesArray.push(new Snowflake(Math.round(Math.random() * c.width), c.width));
-
-                    crds[i] = 0;
-                    x_mv[i] = .03 + Math.random() / 10;
-
+                    snowflakesArray.push(new Snowflake(1 + Math.round(Math.random() * c.width), 0));
                     ++i;
                 }
 
                 function Snowflake(x, y) {
 
-                    this.size = 1 + Math.random() * 3;
+                    this.size = 1 + Math.random() * 2;
                     this.x = x;
-                    this.y = y - (this.size * 2);
-                    this.speed = .005 + Math.random()*(.355);
+                    this.y = y + Math.round(this.size * 2);
+                    this.speed = .01 + Math.random()*(.155);
                     this.style = "rgba(255, 255, 255, " + (1 + Math.random() * 10) / 10 + ")";
+                    this.x_mv = .03 + Math.random() / 10;
+                    this.coords = 0;
                 };
 
                 Snowflake.prototype = {
@@ -59,26 +58,29 @@
                     x: 0,
                     y: 0,
                     speed: 0,
-                    style: ''
+                    style: '',
+                    coords: 0,
+                    x_mv: 0
                 };
 
                 var calibration = {x:null, y:null};
+                var acceleration = {};
 
-                window.addEventListener('devicemotion', draw, true);
+                function updateAccelerometer(e) {
+                    if (calibration.y == e.accelerationIncludingGravity.y) {
+                        return false;
+                    }
 
-                function draw(e) {
+                    acceleration = e.accelerationIncludingGravity;
 
-                    var acceleration = e.accelerationIncludingGravity;
-
-                    if (calibration.x == null) {
+                    if (calibration.y == null) {
                         calibration.x = acceleration.x;
                         calibration.y = acceleration.y;
                     }
+                }
 
-                    if (calibration.y == acceleration.y) {
-                        cx.fillStyle="#fff";
-                        cx.font="30px arial";
-                        cx.fillText("Turn the phone upside down",0,200)
+                function draw() {
+                    if (typeof acceleration.y === 'undefined' || calibration.y == acceleration.y) {
                         return false;
                     }
 
@@ -87,9 +89,9 @@
 
                     var i = 0;
                     while (i < snowflakes) {
-                        crds[i] += x_mv[i];
+                        var snowflake = snowflakesArray[i], speed;
+                        snowflake.coords += snowflake.x_mv;
 
-                        var snowflake = snowflakesArray[i];
                         if (acceleration.y > calibration.y + 10) {
                             speed = acceleration.y * snowflake.speed;
                         }
@@ -97,62 +99,32 @@
                             speed = acceleration.y * snowflake.speed;
                         }
 
-                        snowflake.y -= speed;
-
-                        //console.log(speed);
-                        if (c.height - snowflake.size >= snowflake.y && snowflake.y > 1 && speed > 0) {
-                            snowflake.x += Math.sin(crds[i]);
-                        }
-
-                        cx.beginPath();
-                        cx.fillStyle = snowflake.style;
-                        cx.arc(snowflake.x, snowflake.y, snowflake.size, 0, Math.PI*2, true);
-                        cx.fill();
-                        cx.closePath();
-
-                        if (c.height - snowflake.size <= snowflake.y) {
-                            snowflake.y = c.height - snowflake.size;
-                        } else if (snowflake.y < 1) {
-                            snowflake.y = 0;
-                        }
-
-                        ++i;
-
-                        crds[i] += x_mv[i];
-
-                        var snowflake = snowflakesArray[i];
-                        if (acceleration.y > calibration.y + 10) {
-                            speed = acceleration.y * snowflake.speed;
-                        }
-                        if (acceleration.y < calibration.y + 10) {
-                            speed = acceleration.y * snowflake.speed;
+                        var bounds = (c.height - snowflake.y) + snowflake.size * 2;
+                        if (bounds > 1 && bounds < c.width && (speed > 0 || speed < 0)) {
+                            snowflake.x += Math.sin(snowflake.coords);
                         }
 
                         snowflake.y -= speed;
 
-                        if (c.height - snowflake.size >= snowflake.y && snowflake.y > 1) {
-                            snowflake.x += Math.sin(crds[i]);
-                        }
-
                         cx.beginPath();
-                        cx.fillStyle = snowflake.style;
-                        cx.arc(snowflake.x, snowflake.y, snowflake.size, 0, Math.PI*2, true);
+                        cx.arc(snowflake.x, snowflake.y, snowflake.size, 0, d360, true);
                         cx.fill();
                         cx.closePath();
 
-                        if (c.height - snowflake.size <= snowflake.y) {
-                            snowflake.y = c.height - snowflake.size;
-                        } else if (snowflake.y < 1) {
-                            snowflake.y = 0;
+                        if (c.height - (snowflake.size * 2) <= snowflake.y) {
+                            snowflake.y = (c.height - snowflake.size);
+                        } else if (snowflake.y < 0) {
+                            snowflake.y = snowflake.size * 2;
                         }
 
                         ++i;
                     }
                 }
+
+                var mainLoop = setInterval(draw, 10);
+                window.addEventListener('devicemotion', updateAccelerometer, true);
+
             }
-
-
-
         </script>
     </body>
 </html>
